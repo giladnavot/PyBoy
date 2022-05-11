@@ -183,6 +183,8 @@ class Motherboard:
     def tick(self):
         while self.lcd.processing_frame():
             cycles = self.cpu.tick()
+            if self.cgb:
+                cycles = self.hdma.tick(cycles, self, self.lcd)
 
             if self.cpu.halted:
                 # Fast-forward to next interrupt:
@@ -201,9 +203,9 @@ class Motherboard:
                 # Profiling
                 self.cpu.add_opcode_hit(0x76, cycles // 4)
 
-            if self.cgb and self.lcd._STAT._mode == 0:
-                # HBlank DMA transfers
-                self.hdma.tick(cycles)
+            # if self.cgb and self.lcd._STAT._mode == 0:
+            #     # HBlank DMA transfers
+            #     self.hdma.tick(cycles)
 
             #TODO: Support General Purpose DMA
             # https://gbdev.io/pandocs/CGB_Registers.html#bit-7--0---general-purpose-dma
@@ -438,7 +440,7 @@ class Motherboard:
             elif self.cgb and i == 0xFF54:
                 self.hdma.hdma4 = value
             elif self.cgb and i == 0xFF55:
-                self.hdma.set_hdma5(value)
+                self.hdma.set_hdma5(value, self)
             elif self.cgb and i == 0xFF68:
                 self.lcd.bcps.set(value)
             elif self.cgb and i == 0xFF69:
@@ -479,7 +481,7 @@ class HDMA:
         self.curr_src = 0
         self.curr_dst = 0
 
-    def set_hdma5(self, value):
+    def set_hdma5(self, value, mb):
         if self.transfer_active:
             bit7 = value & 0x80
             if bit7 == 0:
@@ -499,7 +501,9 @@ class HDMA:
             if transfer_type == 0:
                 # General purpose DMA transfer
                 for i in range(bytes_to_transfer):
-                    self.setitem(dst + i, self.getitem(src + i))
+                    # TODO: There's a bug here in Pokemon Crystal
+                    mb.setitem(dst + i, mb.getitem(src + i))
+                    # mb.setitem((dst + i) & 0xFFFF, mb.getitem((src + i) & 0xFFFF))
                 self.hdma5 = 0xFF
                 self.hdma4 = 0xFF
                 self.hdma3 = 0xFF
@@ -513,14 +517,14 @@ class HDMA:
                 self.curr_dst = dst
                 self.curr_src = src
 
-    def tick(self, cycles):
-        if self.transfer_active:
-
+    def tick(self, cycles, mb, lcd):
+        # HBLANK HDMA routine
+        if self.transfer_active and lcd._STAT._mode & 0b11 == 0:
             src = self.curr_src & 0xFFF0
             dst = (self.curr_dst & 0x1FF0) | 0x8000
 
             for i in range(0x10):
-                self.setitem(dst + i, self.getitem(src + i))
+                mb.setitem(dst + i, mb.getitem(src + i))
 
             self.curr_dst += 0x10
             self.curr_src += 0x10
@@ -542,7 +546,13 @@ class HDMA:
                 self.transfer_active = False
                 self.hdma5 = 0xFF
 
+            return cycles + 8 # TODO: adjust for double speed
+        return cycles
+
     def cyclestointerrupt(self):
         # Not really interrupt, but next action. Stop on next lcd mode0 if hblank dma in progress
         # TODO: Needs to implement cyclestointerrupt to stop at next mode0
-        return 4
+        if self.transfer_active:
+            return 4
+        else:
+            return 1 << 32

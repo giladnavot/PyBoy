@@ -75,7 +75,7 @@ def test_screen_buffer_and_image():
     for n in range(275): # Iterate to boot logo
         pyboy.tick()
 
-    assert pyboy.botsupport_manager().screen().raw_screen_buffer_dims() == (160, 144)
+    assert pyboy.botsupport_manager().screen().raw_screen_buffer_dims() == (144, 160)
     assert pyboy.botsupport_manager().screen().raw_screen_buffer_format() == cformat
 
     boot_logo_hash = hashlib.sha256()

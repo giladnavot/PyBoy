@@ -4,11 +4,12 @@
 #
 
 import os.path
-import urllib.request
 from pathlib import Path
 
 import PIL
 from pyboy import PyBoy
+
+from .utils import url_open
 
 OVERWRITE_PNGS = False
 
@@ -17,8 +18,8 @@ def test_dmg_acid():
     # Has to be in here. Otherwise all test workers will import this file, and cause an error.
     dmg_acid_file = "dmg_acid2.gb"
     if not os.path.isfile(dmg_acid_file):
-        print(urllib.request.urlopen("https://pyboy.dk/mirror/LICENSE.dmg-acid2.txt").read())
-        dmg_acid_data = urllib.request.urlopen("https://pyboy.dk/mirror/dmg-acid2.gb").read()
+        print(url_open("https://pyboy.dk/mirror/LICENSE.dmg-acid2.txt"))
+        dmg_acid_data = url_open("https://pyboy.dk/mirror/dmg-acid2.gb")
         with open(dmg_acid_file, "wb") as rom_file:
             rom_file.write(dmg_acid_data)
 

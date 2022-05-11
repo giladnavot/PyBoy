@@ -5,10 +5,18 @@
 
 import hashlib
 import os
+import urllib.request
 from pathlib import Path
 
 BOOTROM_FRAMES_UNTIL_LOGO = 6
 BOOTROM_FRAMES_UNTIL_END = 60 + BOOTROM_FRAMES_UNTIL_LOGO
+
+
+def url_open(url):
+    # https://stackoverflow.com/questions/62684468/pythons-requests-triggers-cloudflares-security-while-urllib-does-not
+    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:77.0) Gecko/20100101 Firefox/77.0"}
+    request = urllib.request.Request(url, headers=headers)
+    return urllib.request.urlopen(request).read()
 
 
 def locate_bootrom(path="ROMs/"):

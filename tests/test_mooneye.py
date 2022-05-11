@@ -6,7 +6,6 @@
 import io
 import os.path
 import platform
-import urllib.request
 from pathlib import Path
 from zipfile import ZipFile
 
@@ -14,6 +13,8 @@ import PIL
 import pytest
 from pyboy import PyBoy
 from tests.utils import default_rom
+
+from .utils import url_open
 
 if platform.python_implementation() == "PyPy":
     timeout = 15
@@ -152,8 +153,8 @@ def test_mooneye(clean, rom):
     # Has to be in here. Otherwise all test workers will import this file, and cause an error.
     mooneye_dir = "mooneye"
     if not os.path.isdir(mooneye_dir):
-        print(urllib.request.urlopen("https://pyboy.dk/mirror/LICENSE.mooneye.txt").read())
-        mooneye_data = io.BytesIO(urllib.request.urlopen("https://pyboy.dk/mirror/mooneye.zip").read())
+        print(urlopen("https://pyboy.dk/mirror/LICENSE.mooneye.txt"))
+        mooneye_data = io.BytesIO(urlopen("https://pyboy.dk/mirror/mooneye.zip"))
         with ZipFile(mooneye_data) as _zip:
             _zip.extractall(mooneye_dir)
 
