@@ -833,7 +833,7 @@ class MemoryWindow(BaseDebugWindow):
                 self.shift_down = False
             elif event == WindowEvent._INTERNAL_MOUSE:
                 # Scrolling
-                if event.window_id == self.window_id:
+                if event.window_id == self.window_id and event.mouse_x == -1 and event.mouse_y == -1:
                     self._scroll_view(event.mouse_scroll_y * -0x100)
 
         return events
