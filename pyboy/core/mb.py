@@ -428,7 +428,7 @@ class Motherboard:
                 self.bootrom_enabled = False
             # CGB registers
             elif self.cgb and i == 0xFF4D:
-                self.ram.key1 = value
+                self.key1 = value
             elif self.cgb and i == 0xFF4F:
                 self.lcd.vbk.set(value)
             elif self.cgb and i == 0xFF51:

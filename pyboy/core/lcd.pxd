@@ -58,6 +58,14 @@ cdef class LCD:
     cdef (int, int) getwindowpos(self)
     cdef (int, int) getviewport(self)
 
+    # CGB
+    cdef uint8_t[8 * 1024] VRAM1
+    cdef VBKregister vbk
+    cdef PaletteIndexRegister bcps
+    cdef PaletteColorRegister bcpd
+    cdef PaletteIndexRegister ocps
+    cdef PaletteColorRegister ocpd
+
 
 cdef class PaletteRegister:
     cdef LCD lcd
@@ -100,6 +108,7 @@ cdef class LCDCRegister:
 
 
 cdef class Renderer:
+    cdef int num_palettes
     cdef uint8_t alphamask
     cdef uint32_t[4] color_palette
     cdef uint32_t[4] obj0_palette
@@ -116,16 +125,39 @@ cdef class Renderer:
     cdef array _screenbuffer_raw
     cdef array _tilecache0_raw, _spritecache0_raw, _spritecache1_raw
     cdef uint32_t[:,:] _screenbuffer
-    cdef uint32_t[:,:] _tilecache0, _spritecache0, _spritecache1
-
-    cdef int[144][5] _scanlineparameters
-
-    @cython.locals(bx=int, by=int, wx=int, wy=int)
-    cdef void scanline(self, int, LCD)
+    cdef uint32_t[:,:,:] _tilecache0, _spritecache0, _spritecache1
 
     cdef list sprites_to_render_n
     cdef list sprites_to_render_x
     cdef int ly_window
+
+    cdef int[144][5] _scanlineparameters
+
+    # CGB
+    cdef set tiles_changed1
+    cdef array _tilecache1_raw, _col_index0_raw, _col_index1_raw, _col_i_raw, _bg_priority_raw
+    cdef uint32_t[:,:,:] _tilecache1
+    cdef uint32_t[:,:] _col_index0
+    cdef uint32_t[:,:] _col_index1
+    cdef uint8_t[:,:] _col_i
+    cdef uint8_t[:,:] _bg_priority
+
+    @cython.locals(
+        bx=int,
+        by=int,
+        wx=int,
+        wy=int,
+        palette=uint8_t,
+        vbank=bint,
+        horiflip=bint,
+        vertflip=bint,
+        bgpriority=bint,
+        xx=int,
+        yy=int,
+        tilecache=uint32_t[:,:],
+        col_index=uint32_t[:,:],
+    )
+    cdef void scanline(self, int, LCD)
 
     @cython.locals(
         y=int,
@@ -145,6 +177,8 @@ cdef class Renderer:
         yy=int,
         xx=int,
         pixel=uint32_t,
+        bgmappriority=bint,
+        col=uint8_t,
     )
     cdef void scanline_sprites(self, LCD, int, uint32_t[:,:], bint)
 
@@ -176,9 +210,76 @@ cdef class Renderer:
         byte1=uint8_t,
         byte2=uint8_t,
         colorcode=uint32_t,
-        alpha=uint32_t
-        )
+        alpha=uint32_t,
+    )
     cdef void update_cache(self, LCD)
 
     cdef void save_state(self, IntIOInterface)
     cdef void load_state(self, IntIOInterface, int)
+
+    @cython.locals(
+        tile_num = uint8_t,
+        palette = uint8_t,
+        vbank = uint8_t,
+        horiflip = uint8_t,
+        vertflip = uint8_t,
+        bgpriority = uint8_t,
+    )
+    cdef tuple _cgb_get_background_map_attributes(self, LCD, int)
+
+cdef class CGBLCD(LCD):
+    pass
+    # cdef uint8_t[8 * 1024] VRAM1
+    # cdef VBKregister vbk
+    # cdef PaletteIndexRegister bcps
+    # cdef PaletteColorRegister bcpd
+    # cdef PaletteIndexRegister ocps
+    # cdef PaletteColorRegister ocpd
+
+cdef class CGBRenderer(Renderer):
+    # cdef set tiles_changed1
+    # cdef array _tilecache1_raw, _col_index0_raw, _col_index1_raw
+    # cdef uint32_t[:,:,:] _tilecache1
+    # cdef uint32_t[:,:] _col_index0
+    # cdef uint32_t[:,:] _col_index1
+    # cdef object _col_i, _bg_priority
+
+    cdef void update_cache(self, LCD)
+    @cython.locals(
+        x=int,
+        t=int,
+        k=int,
+        y=int,
+        byte1=uint8_t,
+        byte2=uint8_t,
+        colorcode=uint32_t,
+        alpha=uint32_t,
+    )
+    cdef void update_tiles(self, LCD, set, int)
+
+cdef class VBKregister:
+    cdef uint8_t active_bank
+
+    cdef void set(self, uint8_t)
+    cdef uint8_t get(self)
+
+cdef class PaletteIndexRegister:
+    cdef uint8_t value
+    cdef int auto_inc
+    cdef int index
+    cdef int hl
+
+    cdef void set(self, uint8_t)
+    cdef uint8_t get(self)
+    cdef int getindex(self)
+    cdef void _inc_index(self)
+    cdef void shouldincrement(self)
+
+cdef class PaletteColorRegister:
+    cdef uint16_t[8 * 4] palette_mem
+    cdef PaletteIndexRegister index_reg
+
+
+    cdef void set(self, uint16_t)
+    cdef uint16_t get(self)
+    cdef uint32_t getcolor(self, uint8_t, uint8_t)
