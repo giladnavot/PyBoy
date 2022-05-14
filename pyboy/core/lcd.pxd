@@ -105,6 +105,7 @@ cdef class LCDCRegister:
     cdef public bint sprite_height
     cdef public bint sprite_enable
     cdef public bint background_enable
+    cdef public bint cgb_master_priority
 
 
 cdef class Renderer:
@@ -151,13 +152,13 @@ cdef class Renderer:
         vbank=bint,
         horiflip=bint,
         vertflip=bint,
-        bgpriority=bint,
+        bg_priority=bint,
         xx=int,
         yy=int,
         tilecache=uint32_t[:,:],
         col_index=uint32_t[:,:],
     )
-    cdef void scanline(self, int, LCD)
+    cdef void scanline(self, LCD, int)
 
     @cython.locals(
         y=int,
@@ -223,7 +224,7 @@ cdef class Renderer:
         vbank = uint8_t,
         horiflip = uint8_t,
         vertflip = uint8_t,
-        bgpriority = uint8_t,
+        bg_priority = uint8_t,
     )
     cdef tuple _cgb_get_background_map_attributes(self, LCD, int)
 
@@ -278,7 +279,6 @@ cdef class PaletteIndexRegister:
 cdef class PaletteColorRegister:
     cdef uint16_t[8 * 4] palette_mem
     cdef PaletteIndexRegister index_reg
-
 
     cdef void set(self, uint16_t)
     cdef uint16_t get(self)

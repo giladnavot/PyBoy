@@ -245,7 +245,10 @@ class Motherboard:
         elif 0x4000 <= i < 0x8000: # 16kB switchable ROM bank
             return self.cartridge.getitem(i)
         elif 0x8000 <= i < 0xA000: # 8kB Video RAM
-            return self.lcd.VRAM0[i - 0x8000]
+            if not self.cgb or self.lcd.vbk.active_bank == 0:
+                return self.lcd.VRAM0[i - 0x8000]
+            else:
+                return self.lcd.VRAM1[i - 0x8000]
         elif 0xA000 <= i < 0xC000: # 8kB switchable RAM bank
             return self.cartridge.getitem(i)
         elif 0xC000 <= i < 0xE000: # 8kB Internal RAM
@@ -351,10 +354,16 @@ class Motherboard:
             # Doesn't change the data. This is for MBC commands
             self.cartridge.setitem(i, value)
         elif 0x8000 <= i < 0xA000: # 8kB Video RAM
-            self.lcd.VRAM0[i - 0x8000] = value
-            if i < 0x9800: # Is within tile data -- not tile maps
-                # Mask out the byte of the tile
-                self.lcd.renderer.tiles_changed0.add(i & 0xFFF0)
+            if not self.cgb or self.lcd.vbk.active_bank == 0:
+                self.lcd.VRAM0[i - 0x8000] = value
+                if i < 0x9800: # Is within tile data -- not tile maps
+                    # Mask out the byte of the tile
+                    self.lcd.renderer.tiles_changed0.add(i & 0xFFF0)
+            else:
+                self.lcd.VRAM1[i - 0x8000] = value
+                if i < 0x9800: # Is within tile data -- not tile maps
+                    # Mask out the byte of the tile
+                    self.lcd.renderer.tiles_changed1.add(i & 0xFFF0)
         elif 0xA000 <= i < 0xC000: # 8kB switchable RAM bank
             self.cartridge.setitem(i, value)
         elif 0xC000 <= i < 0xE000: # 8kB Internal RAM

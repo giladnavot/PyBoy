@@ -152,7 +152,7 @@ class LCD:
                     self.clock_target += 206 * multiplier
                     if self.LY <= 143:
                         self.renderer.update_cache(self)
-                        self.renderer.scanline(self.LY, self)
+                        self.renderer.scanline(self, self.LY)
                         self.renderer.scanline_sprites(self, self.LY, self.renderer._screenbuffer, False)
                         self.next_stat_mode = 2
                     else:
@@ -323,6 +323,7 @@ class LCDCRegister:
         self.sprite_height        = value & (1 << 2)
         self.sprite_enable        = value & (1 << 1)
         self.background_enable    = value & (1 << 0)
+        self.cgb_master_priority  = self.background_enable # Different meaning on CGB
         # yapf: enable
 
 
@@ -387,11 +388,11 @@ class Renderer:
         vbank = (tile_num >> 3) & 1
         horiflip = (tile_num >> 5) & 1
         vertflip = (tile_num >> 6) & 1
-        bgpriority = (tile_num >> 7) & 1
+        bg_priority = (tile_num >> 7) & 1
 
-        return palette, vbank, horiflip, vertflip, bgpriority
+        return palette, vbank, horiflip, vertflip, bg_priority
 
-    def scanline(self, y, lcd):
+    def scanline(self, lcd, y):
         bx, by = lcd.getviewport()
         wx, wy = lcd.getwindowpos()
         self._scanlineparameters[y][0] = bx
@@ -424,7 +425,7 @@ class Renderer:
                     wt = (wt ^ 0x80) + 128
 
                 if self.cgb:
-                    palette, vbank, horiflip, vertflip, bgpriority = self._cgb_get_background_map_attributes(
+                    palette, vbank, horiflip, vertflip, bg_priority = self._cgb_get_background_map_attributes(
                         lcd, tile_addr
                     )
                     tilecache = (self._tilecache1[palette] if vbank else self._tilecache0[palette])
@@ -433,7 +434,7 @@ class Renderer:
 
                     col_index = (self._col_index1 if vbank else self._col_index0)
                     self._col_i[y][x] = col_index[yy][xx]
-                    self._bg_priority[y][x] = bgpriority
+                    self._bg_priority[y][x] = bg_priority
                 else:
                     tilecache = self._tilecache0[0] # Fake palette index
                     xx = (x-wx) % 8
@@ -450,7 +451,7 @@ class Renderer:
                     bt = (bt ^ 0x80) + 128
 
                 if self.cgb:
-                    palette, vbank, horiflip, vertflip, bgpriority = self._cgb_get_background_map_attributes(
+                    palette, vbank, horiflip, vertflip, bg_priority = self._cgb_get_background_map_attributes(
                         lcd, tile_addr
                     )
                     tilecache = (self._tilecache1[palette] if vbank else self._tilecache0[palette])
@@ -459,7 +460,7 @@ class Renderer:
 
                     col_index = (self._col_index1 if vbank else self._col_index0)
                     self._col_i[y][x] = col_index[yy][xx]
-                    self._bg_priority[y][x] = bgpriority
+                    self._bg_priority[y][x] = bg_priority
                 else:
                     tilecache = self._tilecache0[0] # Fake palette index
                     xx = (x+offset) % 8
@@ -541,18 +542,17 @@ class Renderer:
                 xx = 7 - dx if xflip else dx
                 pixel = spritecache[8*tileindex + yy][xx]
                 if 0 <= x < COLS:
-                    if self.cgb:
-                        if lcd._LCDC.background_enable:
-                            bgmappriority = self._bg_priority[y][x]
-                            col = self._col_i[y][x]
-                            if bgmappriority:
-                                if not col == 0:
-                                    pixel &= ~self.alphamask
-                            elif spritepriority:
-                                if not col == 0:
-                                    # Add a fake alphachannel to the sprite for BG pixels. We can't just merge this
-                                    # with the next 'if', as sprites can have an alpha channel in other ways
-                                    pixel &= ~self.alphamask
+                    if self.cgb and lcd._LCDC.cgb_master_priority:
+                        bgmappriority = self._bg_priority[y][x]
+                        col = self._col_i[y][x]
+                        if bgmappriority:
+                            if not col == bgpkey:
+                                pixel &= ~self.alphamask
+                        elif spritepriority:
+                            if not col == bgpkey:
+                                # Add a fake alphachannel to the sprite for BG pixels. We can't just merge this
+                                # with the next 'if', as sprites can have an alpha channel in other ways
+                                pixel &= ~self.alphamask
                     else:
                         # TODO: Checking `buffer[y][x] == bgpkey` is a bit of a hack
                         if (spritepriority and not buffer[ly][x] == bgpkey):
@@ -807,6 +807,10 @@ class CGBRenderer(Renderer):
             self._bg_priority = [v[i:i + COLS] for i in range(0, COLS * ROWS, COLS)]
 
             # create the 3d lists to hold palettes, 8 palettes
+
+    def key_priority(self, x):
+        # Define sprite sorting for CGB
+        return (self.sprites_to_render_n[x], self.sprites_to_render_x[x])
 
 
 #             for i in range(8):
