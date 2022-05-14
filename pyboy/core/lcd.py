@@ -441,7 +441,8 @@ class Renderer:
                     yy = 8*wt + (self.ly_window) % 8
 
                 self._screenbuffer[y][x] = tilecache[yy][xx]
-            elif lcd._LCDC.background_enable:
+            # background_enable doesn't exist for CGB. It works as master priority instead
+            elif (not self.cgb and lcd._LCDC.background_enable) or self.cgb:
                 tile_addr = background_offset + (y+by) // 8 * 32 % 0x400 + (x+bx) // 8 % 32
                 bt = lcd.VRAM0[tile_addr]
                 # If using signed tile indices, modify index
