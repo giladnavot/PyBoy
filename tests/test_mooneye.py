@@ -153,8 +153,8 @@ def test_mooneye(clean, rom):
     # Has to be in here. Otherwise all test workers will import this file, and cause an error.
     mooneye_dir = "mooneye"
     if not os.path.isdir(mooneye_dir):
-        print(urlopen("https://pyboy.dk/mirror/LICENSE.mooneye.txt"))
-        mooneye_data = io.BytesIO(urlopen("https://pyboy.dk/mirror/mooneye.zip"))
+        print(url_open("https://pyboy.dk/mirror/LICENSE.mooneye.txt"))
+        mooneye_data = io.BytesIO(url_open("https://pyboy.dk/mirror/mooneye.zip"))
         with ZipFile(mooneye_data) as _zip:
             _zip.extractall(mooneye_dir)
 

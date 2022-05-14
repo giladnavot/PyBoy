@@ -119,7 +119,7 @@ def test_blarggs(rom):
     # Has to be in here. Otherwise all test workers will import this file, and cause an error.
     blargg_dir = Path("blargg")
     if not os.path.isdir(blargg_dir):
-        print(urlopen("https://pyboy.dk/mirror/LICENSE.blargg.txt"))
+        print(url_open("https://pyboy.dk/mirror/LICENSE.blargg.txt"))
 
         for name in [
             "cgb_sound",
@@ -132,7 +132,7 @@ def test_blarggs(rom):
             "mem_timing",
             "oam_bug",
         ]:
-            blargg_data = io.BytesIO(urlopen(f"https://pyboy.dk/mirror/blargg/{name}.zip"))
+            blargg_data = io.BytesIO(url_open(f"https://pyboy.dk/mirror/blargg/{name}.zip"))
             with ZipFile(blargg_data) as _zip:
                 _zip.extractall(blargg_dir)
 

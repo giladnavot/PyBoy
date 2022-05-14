@@ -25,8 +25,8 @@ def test_shonumi(rom):
     # Has to be in here. Otherwise all test workers will import this file, and cause an error.
     shonumi_dir = "GB Tests"
     if not os.path.isdir(shonumi_dir):
-        print(urlopen("https://pyboy.dk/mirror/SOURCE.GBTests.txt"))
-        shonumi_data = io.BytesIO(urlopen("https://pyboy.dk/mirror/GB%20Tests.zip"))
+        print(url_open("https://pyboy.dk/mirror/SOURCE.GBTests.txt"))
+        shonumi_data = io.BytesIO(url_open("https://pyboy.dk/mirror/GB%20Tests.zip"))
         with ZipFile(shonumi_data) as _zip:
             _zip.extractall(shonumi_dir)
 

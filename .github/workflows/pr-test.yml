@@ -17,10 +17,6 @@ jobs:
       matrix:
         os: [macos-latest, ubuntu-latest, windows-latest]
         python-version: [3.7, 3.8, 3.9, "3.10"]
-        # exclude:
-        # # Gives the following error: /usr/bin/ld: cannot find -lpython3.7m
-        # - os: ubuntu-latest
-        #   python-version: 3.7
 
     steps:
     - uses: actions/checkout@v2
@@ -30,7 +26,7 @@ jobs:
         echo "TEST_CI=1" >> $GITHUB_ENV
         echo "TEST_NO_UI=1" >> $GITHUB_ENV
         sudo apt update
-        sudo apt install libsdl2 libsdl2-dev
+        sudo apt install libsdl2-dev
     - name: Setup macOS
       if: ${{ contains(matrix.os, 'macos-latest') }}
       run: |
@@ -78,12 +74,14 @@ jobs:
       fail-fast: false
       matrix:
         os: [macos-latest, ubuntu-latest, windows-latest]
-        python-version: ['pypy-3.6', 'pypy-3.7']
-        # exclude:
-        # # Not worth the time to fix:
-        # # The headers or library files could not be found for zlib, a required dependency when compiling Pillow from source.
-        # - os: [self-hosted, windows]
-        #   python-version: pypy-3.6
+        python-version: ['pypy-3.7', 'pypy-3.8', 'pypy-3.9']
+        exclude:
+        # Not worth the time to fix:
+        # The headers or library files could not be found for zlib, a required dependency when compiling Pillow from source.
+        - os: windows-latest
+          python-version: pypy-3.7
+        - os: windows-latest
+          python-version: pypy-3.9
     steps:
     - uses: actions/checkout@v2
     - name: Setup Ubuntu
@@ -91,7 +89,8 @@ jobs:
       run: |
         echo "TEST_CI=1" >> $GITHUB_ENV
         echo "TEST_NO_UI=1" >> $GITHUB_ENV
-        apt update && apt install libsdl2 libsdl2-dev
+        sudo apt update
+        sudo apt install libsdl2-dev
     - name: Setup macOS
       if: ${{ contains(matrix.os, 'macos-latest') }}
       run: |
