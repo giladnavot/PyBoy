@@ -71,5 +71,5 @@ cdef class HDMA:
     cdef uint16_t curr_dst
 
     cdef void set_hdma5(self, uint8_t, Motherboard)
-    cdef int tick(self, int, Motherboard, pyboy.core.lcd.LCD)
+    cdef int tick(self, int, Motherboard)
     cdef uint64_t cyclestointerrupt(self)

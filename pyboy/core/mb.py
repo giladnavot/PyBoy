@@ -183,8 +183,8 @@ class Motherboard:
     def tick(self):
         while self.lcd.processing_frame():
             cycles = self.cpu.tick()
-            if self.cgb:
-                cycles = self.hdma.tick(cycles, self, self.lcd)
+            if self.cgb and self.lcd._STAT._mode & 0b11 == 0:
+                cycles = self.hdma.tick(cycles, self)
 
             if self.cpu.halted:
                 # Fast-forward to next interrupt:
@@ -255,9 +255,7 @@ class Motherboard:
             bank_offset = 0
             if self.cgb and 0xD000 <= i:
                 # Find which bank to read from at FF70
-                io_offset = 0xFF00
-                bank_addr = 0xFF70 - io_offset
-                bank = self.getitem(bank_addr)
+                bank = self.getitem(0xFF70)
                 bank &= 0b111
                 if bank == 0x0:
                     bank = 0x01
@@ -327,15 +325,19 @@ class Motherboard:
             elif self.cgb and i == 0xFF6B:
                 return self.lcd.ocpd.get()
             elif self.cgb and i == 0xFF51:
+                logger.error("HDMA1 is not readable")
                 return 0x00 # Not readable
             elif self.cgb and i == 0xFF52:
+                logger.error("HDMA2 is not readable")
                 return 0x00 # Not readable
             elif self.cgb and i == 0xFF53:
+                logger.error("HDMA3 is not readable")
                 return 0x00 # Not readable
             elif self.cgb and i == 0xFF54:
+                logger.error("HDMA4 is not readable")
                 return 0x00 # Not readable
             elif self.cgb and i == 0xFF55:
-                return self.hdma.hdma5
+                return self.hdma.hdma5 & 0xFF
             return self.ram.non_io_internal_ram1[i - 0xFF4C]
         elif 0xFF80 <= i < 0xFFFF: # Internal RAM
             return self.ram.internal_ram1[i - 0xFF80]
@@ -370,9 +372,7 @@ class Motherboard:
             bank_offset = 0
             if self.cgb and 0xD000 <= i:
                 # Find which bank to read from at FF70
-                io_offset = 0xFF00
-                bank_addr = 0xFF70 - io_offset
-                bank = self.getitem(bank_addr)
+                bank = self.getitem(0xFF70)
                 bank &= 0b111
                 if bank == 0x0:
                     bank = 0x01
@@ -526,9 +526,9 @@ class HDMA:
                 self.curr_dst = dst
                 self.curr_src = src
 
-    def tick(self, cycles, mb, lcd):
+    def tick(self, cycles, mb):
         # HBLANK HDMA routine
-        if self.transfer_active and lcd._STAT._mode & 0b11 == 0:
+        if self.transfer_active:
             src = self.curr_src & 0xFFF0
             dst = (self.curr_dst & 0x1FF0) | 0x8000
 
@@ -544,10 +544,10 @@ class HDMA:
             if self.curr_src == 0x8000:
                 self.curr_src = 0xA000
 
-            self.hdma1 = self.curr_src & 0xFF00
+            self.hdma1 = (self.curr_src & 0xFF00) >> 8
             self.hdma2 = self.curr_src & 0x00FF
 
-            self.hdma3 = self.curr_dst & 0xFF00
+            self.hdma3 = (self.curr_dst & 0xFF00) >> 8
             self.hdma4 = self.curr_dst & 0x00FF
 
             self.hdma5 -= 1
