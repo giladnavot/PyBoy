@@ -259,7 +259,7 @@ class Motherboard:
                 bank &= 0b111
                 if bank == 0x0:
                     bank = 0x01
-                bank_offset = bank * 0x1000
+                bank_offset = (bank-1) * 0x1000
             return self.ram.internal_ram0[i - 0xC000 + bank_offset]
         elif 0xE000 <= i < 0xFE00: # Echo of 8kB Internal RAM
             # Redirect to internal RAM
@@ -376,7 +376,7 @@ class Motherboard:
                 bank &= 0b111
                 if bank == 0x0:
                     bank = 0x01
-                bank_offset = bank * 0x1000
+                bank_offset = (bank-1) * 0x1000
             self.ram.internal_ram0[i - 0xC000 + bank_offset] = value
         elif 0xE000 <= i < 0xFE00: # Echo of 8kB Internal RAM
             self.setitem(i - 0x2000, value) # Redirect to internal RAM
@@ -550,10 +550,11 @@ class HDMA:
             self.hdma3 = (self.curr_dst & 0xFF00) >> 8
             self.hdma4 = self.curr_dst & 0x00FF
 
-            self.hdma5 -= 1
-            if self.hdma5 == -1:
+            if self.hdma5 == 0:
                 self.transfer_active = False
                 self.hdma5 = 0xFF
+            else:
+                self.hdma5 -= 1
 
             return cycles + 8 # TODO: adjust for double speed
         return cycles
