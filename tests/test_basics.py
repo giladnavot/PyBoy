@@ -200,7 +200,7 @@ def test_randomize_ram():
 
 @pytest.mark.skipif(not pokemon_crystal_rom, reason="ROM not present")
 def test_not_cgb():
-    pyboy = PyBoy(pokemon_crystal_rom, window_type="headless")
+    pyboy = PyBoy(pokemon_crystal_rom, window_type="headless", cgb=False)
     pyboy.set_emulation_speed(0)
     for _ in range(60 * 7):
         pyboy.tick()

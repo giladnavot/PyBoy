@@ -36,8 +36,8 @@ def test_shonumi(rom):
     # sprite_suite.gb
     # 60 PyBoy Boot
     # 23 Loading
-    # 50 Progress to screenshot
-    for _ in range(60 + 23 + 50):
+    # 48 Progress to screenshot
+    for _ in range(60 + 23 + 48):
         pyboy.tick()
 
     png_path = Path(f"test_results/{rom}.png")
