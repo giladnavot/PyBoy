@@ -118,13 +118,6 @@ class LCD:
 
         if self._LCDC.lcd_enable:
             if self.clock >= self.clock_target:
-                if self.LY == 153:
-                    # Reset to new frame and start from mode 2
-                    self.next_stat_mode = 2
-                    self.LY = -1
-                    self.clock %= FRAME_CYCLES
-                    self.clock_target %= FRAME_CYCLES
-
                 # Change to next mode
                 interrupt_flag |= self._STAT.set_mode(self.next_stat_mode)
 
@@ -138,19 +131,25 @@ class LCD:
 
                 # LCD state machine
                 if self._STAT._mode == 2: # Searching OAM
+                    if self.LY == 153:
+                        self.LY = 0
+                        self.clock %= FRAME_CYCLES
+                        self.clock_target %= FRAME_CYCLES
+                    else:
+                        self.LY += 1
+
                     self.clock_target += 80 * multiplier
                     self.next_stat_mode = 3
-                    self.LY += 1
                     interrupt_flag |= self._STAT.update_LYC(self.LYC, self.LY)
                 elif self._STAT._mode == 3:
                     self.clock_target += 170 * multiplier
                     self.next_stat_mode = 0
                 elif self._STAT._mode == 0: # HBLANK
                     self.clock_target += 206 * multiplier
+                    self.renderer.update_cache(self)
+                    self.renderer.scanline(self, self.LY)
+                    self.renderer.scanline_sprites(self, self.LY, self.renderer._screenbuffer, False)
                     if self.LY < 143:
-                        self.renderer.update_cache(self)
-                        self.renderer.scanline(self, self.LY)
-                        self.renderer.scanline_sprites(self, self.LY, self.renderer._screenbuffer, False)
                         self.next_stat_mode = 2
                     else:
                         self.next_stat_mode = 1
@@ -164,6 +163,10 @@ class LCD:
                     if self.LY == 144:
                         interrupt_flag |= INTR_VBLANK
                         self.frame_done = True
+
+                    if self.LY == 153:
+                        # Reset to new frame and start from mode 2
+                        self.next_stat_mode = 2
         else:
             # See also `self.set_lcdc`
             if self.clock >= FRAME_CYCLES:
