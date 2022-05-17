@@ -298,11 +298,11 @@ class Motherboard:
                 return self.lcd.LYC
             elif i == 0xFF46:
                 return 0x00 # DMA
-            elif not self.cgb and i == 0xFF47:
+            elif i == 0xFF47:
                 return self.lcd.BGP.value
-            elif not self.cgb and i == 0xFF48:
+            elif i == 0xFF48:
                 return self.lcd.OBP0.value
-            elif not self.cgb and i == 0xFF49:
+            elif i == 0xFF49:
                 return self.lcd.OBP1.value
             elif i == 0xFF4A:
                 return self.lcd.WY
@@ -417,13 +417,13 @@ class Motherboard:
                 self.lcd.LYC = value
             elif i == 0xFF46:
                 self.transfer_DMA(value)
-            elif not self.cgb and i == 0xFF47:
+            elif i == 0xFF47:
                 # TODO: Move out of MB
                 self.lcd.renderer.clearcache = self.lcd.renderer.clearcache | self.lcd.BGP.set(value)
-            elif not self.cgb and i == 0xFF48:
+            elif i == 0xFF48:
                 # TODO: Move out of MB
                 self.lcd.renderer.clearcache = self.lcd.renderer.clearcache | self.lcd.OBP0.set(value)
-            elif not self.cgb and i == 0xFF49:
+            elif i == 0xFF49:
                 # TODO: Move out of MB
                 self.lcd.renderer.clearcache = self.lcd.renderer.clearcache | self.lcd.OBP1.set(value)
             elif i == 0xFF4A:
