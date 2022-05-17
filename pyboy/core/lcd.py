@@ -58,9 +58,6 @@ class LCD:
         self.clock = 0
         self.clock_target = 0
         self.frame_done = False
-        self.max_ly = 153
-        if patch_supermarioland:
-            self.max_ly = 155 # Avoid jittering of top scanline. Possibly a fault in the game ROM.
         self.double_speed = False
         self.cgb = cgb
 
@@ -121,7 +118,7 @@ class LCD:
 
         if self._LCDC.lcd_enable:
             if self.clock >= self.clock_target:
-                if self.LY == self.max_ly:
+                if self.LY == 153:
                     # Reset to new frame and start from mode 2
                     self.next_stat_mode = 2
                     self.LY = -1
@@ -150,7 +147,7 @@ class LCD:
                     self.next_stat_mode = 0
                 elif self._STAT._mode == 0: # HBLANK
                     self.clock_target += 206 * multiplier
-                    if self.LY <= 143:
+                    if self.LY < 143:
                         self.renderer.update_cache(self)
                         self.renderer.scanline(self, self.LY)
                         self.renderer.scanline_sprites(self, self.LY, self.renderer._screenbuffer, False)
@@ -161,13 +158,12 @@ class LCD:
                     self.clock_target += 456 * multiplier
                     self.next_stat_mode = 1
 
-                    if self.LY == 144:
-                        interrupt_flag |= INTR_VBLANK
-                        self.frame_done = True
-
                     self.LY += 1
                     interrupt_flag |= self._STAT.update_LYC(self.LYC, self.LY)
 
+                    if self.LY == 144:
+                        interrupt_flag |= INTR_VBLANK
+                        self.frame_done = True
         else:
             # See also `self.set_lcdc`
             if self.clock >= FRAME_CYCLES:
@@ -283,12 +279,6 @@ class STATRegister:
             # Clear LYC flag
             self.value &= 0b1111_1011
         return 0
-
-    def next_mode(self, LY):
-        if self._mode == 0 and LY != 144:
-            return self.set_mode(2)
-        else:
-            return self.set_mode((self._mode + 1) % 4)
 
     def set_mode(self, mode):
         if self._mode == mode:

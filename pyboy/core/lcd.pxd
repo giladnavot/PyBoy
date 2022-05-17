@@ -90,7 +90,6 @@ cdef class STATRegister:
         cdef uint8_t set_mode(self, uint8_t)
         cdef uint8_t update_LYC(self, uint8_t, uint8_t)
     cdef void set(self, uint64_t)
-    cdef uint8_t next_mode(self, uint8_t)
 
 cdef class LCDCRegister:
     cdef uint8_t value
