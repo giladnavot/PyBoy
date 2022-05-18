@@ -14,7 +14,7 @@ from pyboy.utils cimport IntIOInterface
 cdef uint8_t INTR_VBLANK, INTR_LCDC, INTR_TIMER, INTR_SERIAL, INTR_HIGHTOLOW
 cdef uint16_t LCDC, STAT, SCY, SCX, LY, LYC, DMA, BGP, OBP0, OBP1, WY, WX
 cdef int ROWS, COLS, TILES, FRAME_CYCLES, VIDEO_RAM, OBJECT_ATTRIBUTE_MEMORY
-
+cdef uint32_t COL0_FLAG
 
 cdef class LCD:
     cdef uint8_t[8 * 1024] VRAM0
@@ -135,11 +135,8 @@ cdef class Renderer:
 
     # CGB
     cdef set tiles_changed1
-    cdef array _tilecache1_raw, _col_index0_raw, _col_index1_raw, _col_i_raw, _bg_priority_raw
+    cdef array _tilecache1_raw, _col_i_raw, _bg_priority_raw
     cdef uint32_t[:,:,:] _tilecache1
-    cdef uint32_t[:,:] _col_index0
-    cdef uint32_t[:,:] _col_index1
-    cdef uint8_t[:,:] _col_i
     cdef uint8_t[:,:] _bg_priority
 
     @cython.locals(
@@ -155,7 +152,6 @@ cdef class Renderer:
         xx=int,
         yy=int,
         tilecache=uint32_t[:,:],
-        col_index=uint32_t[:,:],
     )
     cdef void scanline(self, LCD, int)
 
@@ -237,13 +233,6 @@ cdef class CGBLCD(LCD):
     # cdef PaletteColorRegister ocpd
 
 cdef class CGBRenderer(Renderer):
-    # cdef set tiles_changed1
-    # cdef array _tilecache1_raw, _col_index0_raw, _col_index1_raw
-    # cdef uint32_t[:,:,:] _tilecache1
-    # cdef uint32_t[:,:] _col_index0
-    # cdef uint32_t[:,:] _col_index1
-    # cdef object _col_i, _bg_priority
-
     cdef void update_cache(self, LCD)
     @cython.locals(
         x=int,
