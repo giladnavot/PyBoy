@@ -260,7 +260,6 @@ cdef class PaletteIndexRegister:
     cdef void set(self, uint8_t)
     cdef uint8_t get(self)
     cdef int getindex(self)
-    cdef void _inc_index(self)
     cdef void shouldincrement(self)
 
     cdef void save_state(self, IntIOInterface)
