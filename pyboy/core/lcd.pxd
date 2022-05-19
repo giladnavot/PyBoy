@@ -135,9 +135,8 @@ cdef class Renderer:
 
     # CGB
     cdef set tiles_changed1
-    cdef array _tilecache1_raw, _col_i_raw, _bg_priority_raw
+    cdef array _tilecache1_raw
     cdef uint32_t[:,:,:] _tilecache1
-    cdef uint8_t[:,:] _bg_priority
 
     @cython.locals(
         bx=int,

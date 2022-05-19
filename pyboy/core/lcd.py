@@ -348,7 +348,8 @@ class LCDCRegister:
         # yapf: enable
 
 
-COL0_FLAG = 0xFF
+COL0_FLAG = 0x0F
+BG_PRIORITY_FLAG = 0xF0
 
 
 class Renderer:
@@ -447,6 +448,7 @@ class Renderer:
                     # add 256 for offset (reduces to + 128)
                     wt = (wt ^ 0x80) + 128
 
+                bg_priority_apply = 0x00
                 if self.cgb:
                     palette, vbank, horiflip, vertflip, bg_priority = self._cgb_get_background_map_attributes(
                         lcd, tile_addr
@@ -455,13 +457,15 @@ class Renderer:
                     xx = (7 - ((x-wx) % 8)) if horiflip else ((x-wx) % 8)
                     yy = (8*wt + (7 - (self.ly_window) % 8)) if vertflip else (8*wt + (self.ly_window) % 8)
 
-                    self._bg_priority[y][x] = bg_priority
+                    if bg_priority:
+                        # We hide extra rendering information in the lower 8 bits (A) of the 32-bit RGBA format
+                        bg_priority_apply = BG_PRIORITY_FLAG
                 else:
                     tilecache = self._tilecache0[0] # Fake palette index
                     xx = (x-wx) % 8
                     yy = 8*wt + (self.ly_window) % 8
 
-                self._screenbuffer[y][x] = tilecache[yy][xx]
+                self._screenbuffer[y][x] = tilecache[yy][xx] | bg_priority_apply
             # background_enable doesn't exist for CGB. It works as master priority instead
             elif (not self.cgb and lcd._LCDC.background_enable) or self.cgb:
                 tile_addr = background_offset + (y+by) // 8 * 32 % 0x400 + (x+bx) // 8 % 32
@@ -472,6 +476,7 @@ class Renderer:
                     # add 256 for offset (reduces to + 128)
                     bt = (bt ^ 0x80) + 128
 
+                bg_priority_apply = 0x00
                 if self.cgb:
                     palette, vbank, horiflip, vertflip, bg_priority = self._cgb_get_background_map_attributes(
                         lcd, tile_addr
@@ -480,7 +485,9 @@ class Renderer:
                     xx = (7 - ((x+offset) % 8)) if horiflip else ((x+offset) % 8)
                     yy = (8*bt + (7 - (y+by) % 8)) if vertflip else (8*bt + (y+by) % 8)
 
-                    self._bg_priority[y][x] = bg_priority
+                    if bg_priority:
+                        # We hide extra rendering information in the lower 8 bits (A) of the 32-bit RGBA format
+                        bg_priority_apply = BG_PRIORITY_FLAG
                 else:
                     tilecache = self._tilecache0[0] # Fake palette index
                     xx = (x+offset) % 8
@@ -489,7 +496,7 @@ class Renderer:
                 # import pdb;pdb.set_trace()
                 # if tilecache[yy][xx] != 255:
                 #     breakpoint()
-                self._screenbuffer[y][x] = tilecache[yy][xx]
+                self._screenbuffer[y][x] = tilecache[yy][xx] | bg_priority_apply
             else:
                 # If background is disabled, it becomes white
                 self._screenbuffer[y][x] = self.color_palette[0]
@@ -562,8 +569,7 @@ class Renderer:
                 pixel = spritecache[8*tileindex + yy][xx]
                 if 0 <= x < COLS:
                     if self.cgb:
-                        bgmappriority = self._bg_priority[y][x] # TODO: Move bg priority into bitmask with COL0_FLAG
-                        # TODO: Just use buffer[ly][x] & COL0_FLAG?? Or buffer[ly][x] & BG_PRIORITY_FLAG??
+                        bgmappriority = buffer[ly][x] & BG_PRIORITY_FLAG
 
                         if lcd._LCDC.cgb_master_priority: # If 0, sprites are always on top, if 1 follow priorities
                             if bgmappriority: # If 0, use spritepriority, if 1 take priority
@@ -777,7 +783,7 @@ class CGBRenderer(Renderer):
         self._tilecache1_raw = array("B", [0xFF] * (TILES*8*8*4*num_palettes))
         # self._spritecache0_raw = array("B", [0xFF] * (TILES*8*8*4*num_palettes))
         # self._spritecache1_raw = array("B", [0xFF] * (TILES*8*8*4*num_palettes))
-        self._bg_priority_raw = array("B", [0xFF] * (ROWS*COLS))
+        # self._bg_priority_raw = array("B", [0xFF] * (ROWS*COLS))
 
         if cythonmode:
             # self._screenbuffer = memoryview(self._screenbuffer_raw).cast("I", shape=(ROWS, COLS))
@@ -785,7 +791,7 @@ class CGBRenderer(Renderer):
             self._tilecache1 = memoryview(self._tilecache1_raw).cast("I", shape=(num_palettes, TILES * 8, 8))
             # self._spritecache0 = memoryview(self._spritecache0_raw).cast("I", shape=(num_palettes, TILES * 8, 8))
             # self._spritecache1 = memoryview(self._spritecache1_raw).cast("I", shape=(num_palettes, TILES * 8, 8))
-            self._bg_priority = memoryview(self._bg_priority_raw).cast("B", shape=(ROWS, COLS))
+            # self._bg_priority = memoryview(self._bg_priority_raw).cast("B", shape=(ROWS, COLS))
         else:
             # v = memoryview(self._screenbuffer_raw).cast("I")
             # self._screenbuffer = [v[i:i + COLS] for i in range(0, COLS * ROWS, COLS)]
@@ -815,8 +821,8 @@ class CGBRenderer(Renderer):
             #             self._spritecache1 = [[v[i:i + 8] for i in range(stride * j, stride * (j+1), 8)]
             #                                   for j in range(num_palettes)]
 
-            v = memoryview(self._bg_priority_raw).cast("B")
-            self._bg_priority = [v[i:i + COLS] for i in range(0, COLS * ROWS, COLS)]
+            # v = memoryview(self._bg_priority_raw).cast("B")
+            # self._bg_priority = [v[i:i + COLS] for i in range(0, COLS * ROWS, COLS)]
 
             # create the 3d lists to hold palettes, 8 palettes
 
