@@ -117,6 +117,11 @@ class Motherboard:
         logger.debug("Saving state...")
         f.write(STATE_VERSION)
         f.write(self.bootrom_enabled)
+        f.write(self.key1)
+        f.write(self.double_speed)
+        f.write(self.cgb)
+        if self.cgb:
+            self.hdma.save_state(f)
         self.cpu.save_state(f)
         self.lcd.save_state(f)
         if self.sound_enabled:
@@ -142,6 +147,16 @@ class Motherboard:
             logger.debug(f"State version: 0-1")
             # HACK: The byte wasn't a state version, but the bootrom flag
             self.bootrom_enabled = state_version
+        if state_version >= 8:
+            self.key1 = f.read()
+            self.double_speed = f.read()
+            _cgb = f.read()
+            if self.cgb != _cgb:
+                logger.critical(f"Loading state which is not CGB, but PyBoy is loaded in CGB mode!")
+                return
+            self.cgb = _cgb
+            if self.cgb:
+                self.hdma.load_state(f, state_version)
         self.cpu.load_state(f, state_version)
         self.lcd.load_state(f, state_version)
         if state_version >= 6 and self.sound_enabled:
@@ -489,6 +504,28 @@ class HDMA:
         self.transfer_active = False
         self.curr_src = 0
         self.curr_dst = 0
+
+    def save_state(self, f):
+        f.write(self.hdma1)
+        f.write(self.hdma2)
+        f.write(self.hdma3)
+        f.write(self.hdma4)
+        f.write(self.hdma5)
+        f.write(self._hdma5)
+        f.write(self.transfer_active)
+        f.write_16bit(self.curr_src)
+        f.write_16bit(self.curr_dst)
+
+    def load_state(self, f, state_version):
+        self.hdma1 = f.read()
+        self.hdma2 = f.read()
+        self.hdma3 = f.read()
+        self.hdma4 = f.read()
+        self.hdma5 = f.read()
+        self._hdma5 = f.read()
+        self.transfer_active = f.read()
+        self.curr_src = f.read_16bit()
+        self.curr_dst = f.read_16bit()
 
     def set_hdma5(self, value, mb):
         if self.transfer_active:

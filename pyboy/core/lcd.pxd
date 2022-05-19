@@ -45,8 +45,6 @@ cdef class LCD:
     cdef PaletteRegister OBP0
     cdef PaletteRegister OBP1
     cdef Renderer renderer
-    cdef bint cgb
-    cdef bint double_speed
 
     @cython.locals(interrupt_flag=uint8_t)
     cdef uint8_t tick(self, int)
@@ -59,6 +57,8 @@ cdef class LCD:
     cdef (int, int) getviewport(self)
 
     # CGB
+    cdef bint cgb
+    cdef bint double_speed
     cdef uint8_t[8 * 1024] VRAM1
     cdef VBKregister vbk
     cdef PaletteIndexRegister bcps
@@ -264,6 +264,9 @@ cdef class PaletteIndexRegister:
     cdef void _inc_index(self)
     cdef void shouldincrement(self)
 
+    cdef void save_state(self, IntIOInterface)
+    cdef void load_state(self, IntIOInterface, int)
+
 cdef class PaletteColorRegister:
     cdef uint16_t[8 * 4] palette_mem
     cdef PaletteIndexRegister index_reg
@@ -271,3 +274,6 @@ cdef class PaletteColorRegister:
     cdef void set(self, uint16_t)
     cdef uint16_t get(self)
     cdef uint32_t getcolor(self, uint8_t, uint8_t)
+
+    cdef void save_state(self, IntIOInterface)
+    cdef void load_state(self, IntIOInterface, int)

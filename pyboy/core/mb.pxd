@@ -22,7 +22,6 @@ cdef uint16_t STAT, LY, LYC
 cdef short VBLANK, LCDC, TIMER, SERIAL, HIGHTOLOW
 
 
-
 cdef class Motherboard:
     cdef pyboy.core.interaction.Interaction interaction
     cdef pyboy.core.bootrom.BootROM bootrom
@@ -65,6 +64,7 @@ cdef class HDMA:
     cdef uint8_t hdma3
     cdef uint8_t hdma4
     cdef uint8_t hdma5
+    cdef uint8_t _hdma5
 
     cdef bint transfer_active
     cdef uint16_t curr_src
@@ -73,3 +73,6 @@ cdef class HDMA:
     cdef void set_hdma5(self, uint8_t, Motherboard)
     cdef int tick(self, int, Motherboard)
     cdef uint64_t cyclestointerrupt(self)
+
+    cdef void save_state(self, IntIOInterface)
+    cdef void load_state(self, IntIOInterface, int)

@@ -214,6 +214,18 @@ class LCD:
         f.write(self.WY)
         f.write(self.WX)
 
+        # CGB
+        f.write(self.cgb)
+        f.write(self.double_speed)
+        if self.cgb:
+            for n in range(VIDEO_RAM):
+                f.write(self.VRAM1[n])
+            f.write(self.vbk.active_bank)
+            self.bcps.save_state(f)
+            self.bcpd.save_state(f)
+            self.ocps.save_state(f)
+            self.ocpd.save_state(f)
+
     def load_state(self, f, state_version):
         for n in range(VIDEO_RAM):
             self.VRAM0[n] = f.read()
@@ -235,6 +247,22 @@ class LCD:
         self.SCX = f.read()
         self.WY = f.read()
         self.WX = f.read()
+
+        # CGB
+        _cgb = f.read()
+        if self.cgb != _cgb:
+            logger.critical(f"Loading state which is not CGB, but PyBoy is loaded in CGB mode!")
+            return
+        self.cgb = _cgb
+        self.double_speed = f.read()
+        if state_version >= 8 and self.cgb:
+            for n in range(VIDEO_RAM):
+                self.VRAM1[n] = f.read()
+            self.vbk.active_bank = f.read()
+            self.bcps.load_state(f, state_version)
+            self.bcpd.load_state(f, state_version)
+            self.ocps.load_state(f, state_version)
+            self.ocpd.load_state(f, state_version)
 
     def getwindowpos(self):
         return (self.WX - 7, self.WY)
@@ -759,9 +787,9 @@ class CGBRenderer(Renderer):
             # self._spritecache1 = memoryview(self._spritecache1_raw).cast("I", shape=(num_palettes, TILES * 8, 8))
             self._bg_priority = memoryview(self._bg_priority_raw).cast("B", shape=(ROWS, COLS))
         else:
-            v = memoryview(self._screenbuffer_raw).cast("I")
-            self._screenbuffer = [v[i:i + COLS] for i in range(0, COLS * ROWS, COLS)]
-            self._screenbuffer_ptr = c_void_p(self._screenbuffer_raw.buffer_info()[0])
+            # v = memoryview(self._screenbuffer_raw).cast("I")
+            # self._screenbuffer = [v[i:i + COLS] for i in range(0, COLS * ROWS, COLS)]
+            # self._screenbuffer_ptr = c_void_p(self._screenbuffer_raw.buffer_info()[0])
 
             stride = TILES * 8 * 8
 
@@ -1018,6 +1046,18 @@ class PaletteIndexRegister:
             new_val = 0x80 | (self.value + 1)
             self.set(new_val)
 
+    def save_state(self, f):
+        f.write(self.value)
+        f.write(self.auto_inc)
+        f.write(self.index)
+        f.write(self.hl)
+
+    def load_state(self, f, state_version):
+        self.value = f.read()
+        self.auto_inc = f.read()
+        self.index = f.read()
+        self.hl = f.read()
+
 
 class PaletteColorRegister:
     def __init__(self, i_reg):
@@ -1060,6 +1100,14 @@ class PaletteColorRegister:
         rgb_color = (red << 16) | (green << 8) | blue
 
         return rgb_color
+
+    def save_state(self, f):
+        for n in range(CGB_NUM_PALETTES * 4):
+            f.write_16bit(self.palette_mem[n])
+
+    def load_state(self, f, state_version):
+        for n in range(CGB_NUM_PALETTES * 4):
+            self.palette_mem[n] = f.read_16bit()
 
 
 ### MOVE TO UTILS?
