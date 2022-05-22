@@ -19,13 +19,13 @@ def url_open(url):
     return urllib.request.urlopen(request).read()
 
 
-def locate_bootrom(path="ROMs/"):
+def locate_bootrom(target_digest, path="ROMs/"):
     if not os.path.isdir(path):
         print(f"locate_bootrom: No directory found: {path}")
         return None
 
     files = map(lambda x: path + x, filter(lambda x: x.endswith(".bin"), os.listdir("ROMs")))
-    target_digest = b"cf053eccb4ccafff9e67339d4e78e98dce7d1ed59be819d2a1ba2232c6fce1c7"
+
     digest_bytes = bytes.fromhex(target_digest.decode("ASCII"))
 
     for rom in files:
@@ -63,7 +63,8 @@ def locate_sha256(entries, digest):
 
 rom_entries = locate_roms()
 
-boot_rom = locate_bootrom()
+boot_rom = locate_bootrom(b"cf053eccb4ccafff9e67339d4e78e98dce7d1ed59be819d2a1ba2232c6fce1c7")
+boot_rom_cgb = locate_bootrom(b"b4f2e416a35eef52cba161b159c7c8523a92594facb924b3ede0d722867c50c7")
 default_rom = str(Path("pyboy/default_rom.gb"))
 pokemon_blue_rom = locate_sha256(rom_entries, b"2a951313c2640e8c2cb21f25d1db019ae6245d9c7121f754fa61afd7bee6452d")
 pokemon_crystal_rom = locate_sha256(rom_entries, b"d6702e353dcbe2d2c69183046c878ef13a0dae4006e8cdff521cca83dd1582fe")
