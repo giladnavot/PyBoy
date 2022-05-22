@@ -29,9 +29,7 @@ except ImportError:
 
 
 class LCD:
-    def __init__(
-        self, cgb, cartridge_cgb, disable_renderer, color_palette, randomize=False, patch_supermarioland=False
-    ):
+    def __init__(self, cgb, cartridge_cgb, disable_renderer, color_palette, randomize=False):
         self.VRAM0 = array("B", [0] * VIDEO_RAM)
         self.OAM = array("B", [0] * OBJECT_ATTRIBUTE_MEMORY)
 
@@ -698,12 +696,8 @@ CGB_NUM_PALETTES = 8
 
 
 class CGBLCD(LCD):
-    def __init__(
-        self, cgb, cartridge_cgb, disable_renderer, color_palette, randomize=False, patch_supermarioland=False
-    ):
-        LCD.__init__(
-            self, cgb, cartridge_cgb, disable_renderer, color_palette, randomize=False, patch_supermarioland=False
-        )
+    def __init__(self, cgb, cartridge_cgb, disable_renderer, color_palette, randomize=False):
+        LCD.__init__(self, cgb, cartridge_cgb, disable_renderer, color_palette, randomize=False)
         self.VRAM1 = array("B", [0] * VIDEO_RAM)
 
         self.vbk = VBKregister()

@@ -51,7 +51,6 @@ class Motherboard:
                 disable_renderer,
                 color_palette,
                 randomize=randomize,
-                patch_supermarioland=self.cartridge.gamename == "SUPER MARIOLAN" # NOTE: 'LAND' is truncated
             )
         else:
             self.lcd = lcd.LCD(
@@ -60,7 +59,6 @@ class Motherboard:
                 disable_renderer,
                 color_palette,
                 randomize=randomize,
-                patch_supermarioland=self.cartridge.gamename == "SUPER MARIOLAN" # NOTE: 'LAND' is truncated
             )
         self.sound_enabled = sound_enabled
         if sound_enabled:
