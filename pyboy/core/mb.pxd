@@ -71,7 +71,7 @@ cdef class HDMA:
     cdef uint16_t curr_dst
 
     cdef void set_hdma5(self, uint8_t, Motherboard)
-    cdef int tick(self, int, Motherboard)
+    cdef int tick(self, Motherboard)
     cdef uint64_t cyclestointerrupt(self)
 
     cdef void save_state(self, IntIOInterface)
