@@ -208,18 +208,14 @@ class Motherboard:
                 # it gets triggered mid-frame or by next frame
                 # Serial is not implemented, so this isn't a concern
                 cycles = min(
-                    self.lcd.cyclestointerrupt(),
-                    self.timer.cyclestointerrupt(),
-                    # self.serial.cyclestointerrupt(),
-                    self.hdma.cyclestointerrupt() if self.cgb else 1 << 32, # Not really interrupt, but next action.
+                    self.lcd.cycles_to_interrupt(),
+                    self.timer.cycles_to_interrupt(),
+                    # self.serial.cycles_to_interrupt(),
+                    self.lcd.cycles_to_mode0() if self.cgb and self.hdma.transfer_active else 1 << 32
                 )
 
                 # Profiling
                 self.cpu.add_opcode_hit(0x76, cycles // 4)
-
-            # if self.cgb and self.lcd._STAT._mode == 0:
-            #     # HBlank DMA transfers
-            #     self.hdma.tick(cycles)
 
             #TODO: Support General Purpose DMA
             # https://gbdev.io/pandocs/CGB_Registers.html#bit-7--0---general-purpose-dma
@@ -351,7 +347,6 @@ class Motherboard:
                 logger.error("HDMA4 is not readable")
                 return 0x00 # Not readable
             elif self.cgb and i == 0xFF55:
-                print("GET hdma5", hex(self.hdma.hdma5))
                 return self.hdma.hdma5 & 0xFF
             return self.ram.non_io_internal_ram1[i - 0xFF4C]
         elif 0xFF80 <= i < 0xFFFF: # Internal RAM
@@ -377,7 +372,6 @@ class Motherboard:
                     # Mask out the byte of the tile
                     self.lcd.renderer.tiles_changed0.add(i & 0xFFF0)
             else:
-                # print('VRAM1')
                 self.lcd.VRAM1[i - 0x8000] = value
                 if i < 0x9800: # Is within tile data -- not tile maps
                     # Mask out the byte of the tile
@@ -460,16 +454,12 @@ class Motherboard:
             elif self.cgb and i == 0xFF51:
                 # if 0x7F < value < 0xA0:
                 #     value = 0
-                print("set hdma", hex(i), hex(value))
                 self.hdma.hdma1 = value
             elif self.cgb and i == 0xFF52:
-                print("set hdma", hex(i), hex(value))
                 self.hdma.hdma2 = value # & 0xF0
             elif self.cgb and i == 0xFF53:
-                print("set hdma", hex(i), hex(value))
                 self.hdma.hdma3 = value # & 0x1F
             elif self.cgb and i == 0xFF54:
-                print("set hdma", hex(i), hex(value))
                 self.hdma.hdma4 = value # & 0xF0
             elif self.cgb and i == 0xFF55:
                 self.hdma.set_hdma5(value, self)
@@ -536,9 +526,7 @@ class HDMA:
         self.curr_dst = f.read_16bit()
 
     def set_hdma5(self, value, mb):
-        print("set HDMA5", bin(value), hex(value))
         if self.transfer_active:
-            print("transfer_active")
             bit7 = value & 0x80
             if bit7 == 0:
                 # terminate active transfer
@@ -547,7 +535,6 @@ class HDMA:
             else:
                 self.hdma5 = value & 0x7F
         else:
-            print("init")
             self.hdma5 = value & 0xFF
             bytes_to_transfer = ((value & 0x7F) * 16) + 16
             src = (self.hdma1 << 8) | (self.hdma2 & 0xF0)
@@ -556,14 +543,9 @@ class HDMA:
 
             transfer_type = value >> 7
             if transfer_type == 0:
-                print("General", hex(src), hex(dst), hex(bytes_to_transfer))
-                # if dst==0x9630 and src==0xd020:
-                # breakpoint()
                 # General purpose DMA transfer
                 for i in range(bytes_to_transfer):
-                    # TODO: There's a bug here in Pokemon Crystal
-                    mb.setitem(dst + i, mb.getitem(src + i))
-                    # mb.setitem((dst + i) & 0xFFFF, mb.getitem((src + i) & 0xFFFF))
+                    mb.setitem((dst + i) & 0xFFFF, mb.getitem((src + i) & 0xFFFF))
                 # self.curr_dst += bytes_to_transfer
                 # self.curr_src += bytes_to_transfer
 
@@ -577,7 +559,6 @@ class HDMA:
                 # https://gist.github.com/drhelius/3394856
                 # cpu is halted during dma transfer
             else:
-                print("HBLANK")
                 # Hblank DMA transfer
                 # set 7th bit to 0
                 self.hdma5 = self.hdma5 & 0x7F
@@ -588,44 +569,32 @@ class HDMA:
 
     def tick(self, mb):
         # HBLANK HDMA routine
-        if self.transfer_active:
-            print("HDMA tick", hex(self.hdma1), hex(self.hdma2), hex(self.hdma3), hex(self.hdma4), hex(self.hdma5))
-            src = self.curr_src & 0xFFF0
-            dst = (self.curr_dst & 0x1FF0) | 0x8000
+        src = self.curr_src & 0xFFF0
+        dst = (self.curr_dst & 0x1FF0) | 0x8000
 
-            for i in range(0x10):
-                print("HDMA", hex(src + i), hex(dst + i))
-                mb.setitem(dst + i, mb.getitem(src + i))
+        for i in range(0x10):
+            mb.setitem(dst + i, mb.getitem(src + i))
 
-            self.curr_dst += 0x10
-            self.curr_src += 0x10
+        self.curr_dst += 0x10
+        self.curr_src += 0x10
 
-            if self.curr_dst == 0xA000:
-                self.curr_dst = 0x8000
+        if self.curr_dst == 0xA000:
+            self.curr_dst = 0x8000
 
-            if self.curr_src == 0x8000:
-                self.curr_src = 0xA000
+        if self.curr_src == 0x8000:
+            self.curr_src = 0xA000
 
-            self.hdma1 = (self.curr_src & 0xFF00) >> 8
-            self.hdma2 = self.curr_src & 0x00FF
+        self.hdma1 = (self.curr_src & 0xFF00) >> 8
+        self.hdma2 = self.curr_src & 0x00FF
 
-            self.hdma3 = (self.curr_dst & 0xFF00) >> 8
-            self.hdma4 = self.curr_dst & 0x00FF
+        self.hdma3 = (self.curr_dst & 0xFF00) >> 8
+        self.hdma4 = self.curr_dst & 0x00FF
 
-            if self.hdma5 == 0:
-                self.transfer_active = False
-                # self.hdma5 = self._hdma5 | 0x80
-                self.hdma5 = 0xFF
-            else:
-                self.hdma5 -= 1
-
-            return 206 # TODO: adjust for double speed
-        return 0
-
-    def cyclestointerrupt(self):
-        # Not really interrupt, but next action. Stop on next lcd mode0 if hblank dma in progress
-        # TODO: Needs to implement cyclestointerrupt to stop at next mode0
-        if self.transfer_active:
-            return 4
+        if self.hdma5 == 0:
+            self.transfer_active = False
+            # self.hdma5 = self._hdma5 | 0x80
+            self.hdma5 = 0xFF
         else:
-            return 1 << 32
+            self.hdma5 -= 1
+
+        return 206 # TODO: adjust for double speed

@@ -81,7 +81,7 @@ class TestLCD:
     #     assert lcd.clock == 0
     #     assert lcd.clock_target == 0
 
-    #     def cyclestointerrupt(self):
+    #     def cycles_to_interrupt(self):
     #         return self.clock_target - self.clock
 
     #     def tick(self, cycles):

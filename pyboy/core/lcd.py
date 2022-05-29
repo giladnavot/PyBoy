@@ -100,8 +100,31 @@ class LCD:
     def set_stat(self, value):
         self._STAT.set(value)
 
-    def cyclestointerrupt(self):
+    def cycles_to_interrupt(self):
         return self.clock_target - self.clock
+
+    def cycles_to_mode0(self):
+        multiplier = 2 if self.double_speed else 1
+        mode2 = 80 * multiplier
+        mode3 = 170 * multiplier
+        mode1 = 456 * multiplier
+
+        mode = self._STAT._mode
+        # Remaining cycles for this already active mode
+        remainder = self.clock_target - self.clock
+
+        if mode == 2:
+            return remainder + mode3
+        elif mode == 3:
+            return remainder
+        elif mode == 0:
+            return 0
+        elif mode == 1:
+            remaining_ly = 153 - self.LY
+            return remainder + mode1*remaining_ly + mode2 + mode3
+        else:
+            logger.error(f"Unsupported STAT mode: {mode}")
+            return 0
 
     def processing_frame(self):
         b = (not self.frame_done)
@@ -330,8 +353,8 @@ class LCDCRegister:
         # yapf: enable
 
 
-COL0_FLAG = 0x0F
-BG_PRIORITY_FLAG = 0xF0
+COL0_FLAG = 0b01
+BG_PRIORITY_FLAG = 0b10
 
 
 class Renderer:

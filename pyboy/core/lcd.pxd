@@ -48,7 +48,7 @@ cdef class LCD:
 
     @cython.locals(interrupt_flag=uint8_t)
     cdef uint8_t tick(self, int)
-    cdef uint64_t cyclestointerrupt(self)
+    cdef uint64_t cycles_to_interrupt(self)
 
     cdef void save_state(self, IntIOInterface)
     cdef void load_state(self, IntIOInterface, int)
@@ -220,7 +220,7 @@ cdef class Renderer:
         vertflip = uint8_t,
         bg_priority = uint8_t,
     )
-    cdef tuple _cgb_get_background_map_attributes(self, LCD, int)
+    cdef (int, int, int, int, int) _cgb_get_background_map_attributes(self, LCD, int)
 
 cdef class CGBLCD(LCD):
     pass
